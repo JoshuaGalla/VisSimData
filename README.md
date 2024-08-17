@@ -1,6 +1,6 @@
 # **Read Me:**
 
-Repository for VisSimData.
+Repository for VisSimData (in progress).
 
 # **Project Overview:**
 
