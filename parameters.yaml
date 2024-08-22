@@ -1,0 +1,26 @@
+General:
+  seed: 42
+  method: interp_control    # options are interp_control, interp_sim
+  response_data: "./data/response_data.txt"
+  stim_data: "./data/stim_data.txt"
+
+Simulate:
+  stim_interval: 100 #interstimulus interval time
+  dim1_min: 1 #min x value
+  dim1_max: 10 #max x value
+  dim2_min: 1 #min y value
+  dim2_max: 10 #max y value
+  num_frames: 4000 #number of frames/response values per neuron
+  max_response: 20.0 #max response that a neuron's ap can reach (set for easier visualization)
+  no_response_prob: 0.3 #probability of stimulus not inducing any response
+
+Neurons:
+  num_neurons: 10 #number of simulated neurons to generate
+  neuron: 8 #int or 'all'
+
+Interpolate:
+  gamma: 125 #steepness of distribution
+  var: 0.5 #variance of kernel
+  nu: 1e-1 #trade off explore exploit
+  eta: 5e-2 #noise in GP
+  kernel: 'rbf'
