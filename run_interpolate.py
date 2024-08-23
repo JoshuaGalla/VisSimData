@@ -1,11 +1,10 @@
- import sys
+import sys
 import json
 import numpy as np
 from analysis.config import config
 from analysis.interpolate import calc_interp
 from plots import plot_tc_sim, plot_tc_control, plot_interp_sim, plot_interp_control
-from model.spots_data_sim import spots_analysis_sim
-from model.spots_data_control import spots_analysis_exp
+from model.sim_data import sim_data_analysis
 
 # Load in parameters
 config = Config(file='parameters.yaml')
@@ -24,31 +23,16 @@ if config.method == 'interp_sim': #offline tuning curve fit for exp data (indivi
     
     neuron = config.neuron
 
-    my_x_star, my_stim_data, my_response_data, avg_map, neuron = spots_analysis_exp().get_exp_data(neuron)
+    my_x_star, my_stim_data, my_response_data, avg_map, neuron = sim_data().get_sim_data(neuron)
 
-    f, sigma = calc_offline_fit(my_stim_data, my_response_data, my_x_star, config.var, config.gamma, config.eta, config.kernels)
+    f, sigma = interpolate(stim_data, response_data, my_x_star, config.var, config.gamma, config.eta, config.kernels)
 
-    with open(dataset + '/spots_data_f.npy', 'wb') as file:
+    with open(dataset + '/sim_data_f.npy', 'wb') as file:
         np.save(file,f)
-    with open(dataset + '/spots_data_sigma.npy', 'wb') as file:
+    with open(dataset + '/sim_data_sigma.npy', 'wb') as file:
         np.save(file,sigma)
 
     spots_plots_exp().exp_data_plot(avg_map, neuron)
-
-    sys.exit()
-
-elif config.method == 'interp_control': #offline tuning curve fit for sim data
-
-    my_x_star, my_stim_data, my_response_data, combined_pdf_reshape = spots_analysis_sim().get_simmed_data()
-
-    f, sigma = calc_offline_fit(my_stim_data, my_response_data, my_x_star, config.var, config.gamma, config.eta, config.kernels)
-
-    with open(dataset + '/spots_data_f.npy', 'wb') as file:
-        np.save(file,f)
-    with open(dataset + '/spots_data_sigma.npy', 'wb') as file:
-        np.save(file,sigma)
-
-    spots_plots_sim().simmed_data_plot(combined_pdf_reshape)
 
     sys.exit()
     
