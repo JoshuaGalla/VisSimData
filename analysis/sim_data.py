@@ -18,9 +18,12 @@ class sim_data_analysis(): #carries out analysis, exclusion, and correction of n
         #matching response to stim
         self.all_stim_info = None
         
-        
-        
-                
+        #retrieving tuning curve info
+        self.all_combos = None 
+        self.avg_map = None 
+        self.param1 = None 
+        self.param2 = None
+            
     def read_config(self, file):
         
         """
@@ -36,15 +39,16 @@ class sim_data_analysis(): #carries out analysis, exclusion, and correction of n
         with open(file, 'r') as file:
             parameters = yaml.safe_load(file)
         
-        self.response_data = self.dataset + parameters['General']['response_data']
-        self.stim_data = self.dataset + parameters['General']['stim_data']
+        self.response_data = parameters['General']['response_data']
+        self.stim_data = parameters['General']['stim_data']
         self.seed = parameters['General']['seed']
         
         self.stim_interval = parameters['Simulate']['stim_interval']
-        self.dim1_min = parameters['Simulate']['dim1_min'] 
-        self.dim1_max = parameters['Simulate']['dim1_max']  
-        self.dim2_min = parameters['Simulate']['dim2_min'] 
-        self.dim2_max = parameters['Simulate']['dim2_max']  
+        
+        self.param1 = list(range(parameters['Simulate']['dim1_min'], parameters['Simulate']['dim1_max']+1))
+        self.param2 = list(range(parameters['Simulate']['dim2_min'], parameters['Simulate']['dim2_max']+1))
+        
+        self.num_neurons = parameters['Neurons']['num_neurons']
         self.num_frames = parameters['Simulate']['num_frames']  
         self.max_response = parameters['Simulate']['max_response'] 
         self.no_response_prob = parameters['Simulate']['no_response_prob']  
@@ -74,14 +78,8 @@ class sim_data_analysis(): #carries out analysis, exclusion, and correction of n
         print("Matching responses to stim characteristics...")
         self.all_stim_info = self.stim_combo_analysis()
         
-        print("Creating tuning curve characteristics...")
-        self.all_combos, self.avg_map, self.param1, self.param2 = self.tuning_curves_analysis(neuron)
-        
-        
-
-        
-        
-
+        print("Defining tuning curve characteristics...")
+        self.all_combos, self.avg_map = self.tuning_curves_analysis(neuron)
     
     def generate_stim_data(self):
     
@@ -102,22 +100,20 @@ class sim_data_analysis(): #carries out analysis, exclusion, and correction of n
         num_stimuli = len(col1)
 
         #create random values for dim1 and dim2
-        col2 = np.random.randint(self.dim1_min, self.dim1_max+1, size=num_stimuli)
-        col3 = np.random.randint(self.dim2_min, self.dim2_max+1, size=num_stimuli)  
+        col2 = np.random.randint(min(self.param1), max(self.param1)+1, size=num_stimuli)
+        col3 = np.random.randint(min(self.param1), max(self.param2)+1, size=num_stimuli)  
 
         #combine
         data = np.column_stack((col1, col2, col3))
 
         #save
-        file_name = "../data/stim_data.txt"
+        file_name = "./data/stim_data.txt"
         np.savetxt(file_name, data, delimiter=' ', fmt='%d')
         num_stimuli = (self.num_frames // self.stim_interval)
 
         print(f"File {file_name} has been created with {num_stimuli-1} stimuli")
     
         return num_stimuli 
-
-
 
     def generate_ap(self, width, amplitude):
     
@@ -140,8 +136,6 @@ class sim_data_analysis(): #carries out analysis, exclusion, and correction of n
             ap[i] = amplitude * np.exp(-((i - midpoint) ** 2) / (2 * (width / 6) ** 2))
 
         return ap
-
-
 
     def generate_stim_responses(self):
 
@@ -180,12 +174,10 @@ class sim_data_analysis(): #carries out analysis, exclusion, and correction of n
                 ap_end = ap_start + width
                 matrix[neuron, ap_start:ap_end] += ap
 
-        file_name = "../data/stim_responses.txt"
+        file_name = "./data/stim_responses.txt"
         np.savetxt(file_name, matrix, fmt='%.2f')
 
         print(f"File {file_name} has been created for {self.num_neurons} neurons with {self.num_frames} responses")
-    
-    
     
     def get_responses(self):
 
@@ -201,7 +193,7 @@ class sim_data_analysis(): #carries out analysis, exclusion, and correction of n
             savgol_avg (array): Fitted smoothed line using Savitzky-Golay filter representing average to correct for noise
         """
 
-        with open(self.response_data, 'r') as file:
+        with open('./data' + self.response_data, 'r') as file:
             neurons_responses = file.readlines()
 
         neurons_responses_dict = {key:[] for key in range(1, (len(neurons_responses)+1))}
@@ -251,7 +243,7 @@ class sim_data_analysis(): #carries out analysis, exclusion, and correction of n
             all_stim_info (list): list containing characteristics for each stimulus occurrence 
         """
 
-        with open(self.stim_data) as file:
+        with open('./data' + self.stim_data) as file:
             stimuli = file.readlines()
 
         all_stim_info = []
@@ -265,7 +257,7 @@ class sim_data_analysis(): #carries out analysis, exclusion, and correction of n
 
         return all_stim_info
     
-    def tuning_curves_analysis(neuron):
+    def tuning_curves_analysis(self, neuron):
     
         """
         Calculates average response for specified neuron(s) and maps response to stimulus characteristics
@@ -275,32 +267,24 @@ class sim_data_analysis(): #carries out analysis, exclusion, and correction of n
 
         Returns:
             all_combos (array): array of every unique combo between possibly tested parameters
-            responses_map (dict): average of responses associated with a combo of possibly tested parameters
             avg_map (dict): average of responses associated with a combo of tested parameters
-            stim_responses (dict): contains stim onset frame and the subsequent responses at the following frames
-            param1 (list): list of possible sampled values for dimension1
-            param1_frames (dict): contains tested values of dim1 as keys and frames of matching stim onset responses as values
-            param2 (list): list of possible sampled values for dimension2
-            param2_frames (dict): contains tested values of dim2 as keys and frames of matching stim onset responses as values
         """
 
-        param1 = list(range(self.dim1_min, self.dim1_max+1))
-        param2 = list(range(self.dim2_min, self.dim2_max+1))
-        all_combos = np.array([(x, y) for x in param1 for y in param2])
+        all_combos = np.array([(x, y) for x in self.param1 for y in self.param2])
 
-        param1_frames = {key:[] for key in param1}
-        param2_frames = {key:[] for key in param2}
+        param1_frames = {key:[] for key in self.param1}
+        param2_frames = {key:[] for key in self.param2}
 
         #appending frame of matching unqiue param tested as value
         for stim in self.all_stim_info:
             stim_param1 = stim[1]
             stim_param2 = stim[2]
 
-            for param in param1:
+            for param in self.param1:
                 if param == stim_param1:
                     param1_frames[param].append(stim[0])
 
-            for param in param2:
+            for param in self.param2:
                 if param == stim_param2:
                     param2_frames[param].append(stim[0])
 
@@ -314,7 +298,7 @@ class sim_data_analysis(): #carries out analysis, exclusion, and correction of n
 
         for frame, response in stim_responses.items():
             frame_idx = 0
-            for stim in all_stim_info:
+            for stim in self.all_stim_info:
                 frame_idx += 1
 
                 #finding range/window of frames that correspond to stimulus onset
@@ -355,19 +339,19 @@ class sim_data_analysis(): #carries out analysis, exclusion, and correction of n
         stim_responses = sorted(stim_responses.items())
 
         for idx, i in enumerate(stim_responses):
-            all_stim_info[idx].append(i[1])
+            self.all_stim_info[idx].append(i[1])
 
-        responses_map = {}
+        #responses_map = {}
         avg_map = {}
         for row in all_combos:
-            responses_map[tuple(row)] = []
+            #responses_map[tuple(row)] = []
             avg_map[tuple(row)] = []
 
         #appending average values associated with unique combo of parameters
         for combo in avg_map:
-            for stim in all_stim_info:
+            for stim in self.all_stim_info:
                 if combo[0] == stim[1] and combo[1] == stim[2]:
-                    responses_map[combo].append(stim[3])
+                    #responses_map[combo].append(stim[3])
                     avg_map[combo].append(stim[3])
 
         #calculating average and replacing non-sampled spaces with nan
@@ -379,19 +363,18 @@ class sim_data_analysis(): #carries out analysis, exclusion, and correction of n
             else:
                 avg_map[combo] = np.nan
 
-        return all_combos, avg_map, param1, param2
-
+        return all_combos, avg_map
 
     def get_sim_data(self, neuron):
         
         """
-        retrieves x_star, stim_data, and response_data that serves as input for offline fit
+        retrieves x_star, stim_data, and response_data that serves as input for tuning curve interpolation
 
         Args:
-            neuron (int): specific neuron to be analyzed (ints 0-398 can be chosen)
+            neuron (int): specific neuron to be analyzed
 
         Returns:
-            my_x_star (array): array of shape (# of all unique stimuli combos, # of parameters)
+            x_star (array): array of shape (# of all unique stimuli combos, # of parameters)
             stim_data (array): array of shape (# of total stimuli shown in experiment, # of parameters)
             resonse_data (array): array of shape (# of neurons being analyzed, # of total stimuli shown in experiment)
         """
@@ -399,7 +382,7 @@ class sim_data_analysis(): #carries out analysis, exclusion, and correction of n
         self.read_config('parameters/parameters.yaml')
         self.calc_exp(neuron)
         
-        my_x_star = self.all_combos
+        x_star = self.all_combos
         
         stim_data = []
         response_data = []
@@ -412,7 +395,7 @@ class sim_data_analysis(): #carries out analysis, exclusion, and correction of n
         response_data = response_data.reshape(1,-1)
         
         avg_map = self.avg_map
-        
-        #print(my_x_star.shape, my_stim_data.shape, my_response_data.shape)
-        
-        return my_x_star, stim_data, response_data, avg_map, neuron
+        param1 = self.param1
+        param2 = self.param2
+                
+        return x_star, stim_data, response_data, avg_map, param1, param2, neuron
