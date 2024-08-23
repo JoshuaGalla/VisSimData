@@ -1,73 +1,66 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-class sim_data_plots(): #carries out plotting for experimental data
-    
-    def read_config(self, file):
+class sim_data_plots(): #carries out plotting for tuning curves
+        
+    def plot_tc(self, avg_map, param1, param2, neuron):
         
         """
-        reads in dataset, raw data, and stimulus data
+        plots non-interpolated tuning curve for selected neuron
 
         Args:
-            file (str): .yml file of parameters ("parameters.yml")
+            neuron (int): specific neuron to be analyzed
 
         Returns:
-            None
+            None, but displays non-interpolated tuning curve for selected neuron
         """
         
-        with open(file, 'r') as file:
-            parameters = yaml.safe_load(file)
+        known_values = np.array([response for response in avg_map.values() if response])
+        interped_data = known_values.reshape(len(param1), len(param2))
+                
+        fig, ax = plt.subplots(figsize=(8, 6))
+        plt.imshow(interped_data.T, origin = 'lower', aspect = 'auto')
+        plt.colorbar(label='Response')
+        plt.xlabel('Dimension 1')
+        plt.ylabel('Dimension 2')
+        plt.xticks(np.arange(len(param1)), param1)
+        plt.yticks(np.arange(len(param2)), param2)
+        if neuron == 'all':
+            plt.title('Non-Interpolated Tuning Curve for Avg Neural Response')
+        else:
+            plt.title(f'N{neuron} Non-Interpolated Tuning Curve')
+        plt.tight_layout()
+        plt.show()
         
-        self.dataset = parameters['General']['dataset']
-        
-        self.param1 = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-        self.param2 = [0.02, 0.04, 0.06, 0.08, 0.10, 0.12]
-        
-    def exp_data_plot(self, avg_map, neuron):
-        
+    def plot_tc_interp(self, param1, param2, neuron):
+
         """
-        plots interpolated offline fit of tuning curve for selected neuron
+        plots interpolated tuning curve for selected neuron
 
         Args:
-            neuron (int): specific neuron to be analyzed (ints 0-398 can be chosen)
+            neuron (int): specific neuron to be analyzed
 
         Returns:
             None, but displays interpolated tuning curve for selected neuron
         """
-        
-        self.read_config('parameters/zebrafish.yaml')
-         
-        with open(self.dataset + '/spots_data_f.npy', 'rb') as f:
-            pred_means = np.load(f)
-        with open(self.dataset + '/spots_data_sigma.npy', 'rb') as f:
-            cov = np.load(f)
-        
-        known_values = np.array([response for response in avg_map.values() if response])
-        interped_data = known_values.reshape(len(self.param1), len(self.param2))
-        
-        means = np.reshape(pred_means,(1,len(self.param1),len(self.param2)))
-        
-        fig, ax = plt.subplots(figsize=(8, 6))
-        plt.imshow(interped_data, origin = 'lower', aspect = 'auto')
-        plt.colorbar(label='Response')
-        plt.xlabel('Speed (Velocity)')
-        plt.ylabel('Size (Circle Radius)')
-        plt.xticks(np.arange(len(self.param2)), self.param2)
-        plt.yticks(np.arange(len(self.param1)), self.param1)
-        plt.title(f'N{neuron} offline tuning curve input')
-        plt.savefig(self.dataset + f'/N{neuron}_offline_input.png')
-        plt.tight_layout()
-        plt.show()
-        
-        fig, ax = plt.subplots(figsize=(8, 6))
-        plt.imshow(means[0], origin='lower', aspect = 'auto')
-        plt.colorbar(label='Response')
-        plt.xlabel('Speed (Velocity)')
-        plt.ylabel('Size (Circle Radius)')
-        plt.title(f'N{neuron} offline tuning curve output')
-        plt.xticks(np.arange(len(self.param2)), self.param2)
-        plt.yticks(np.arange(len(self.param1)), self.param1)
-        plt.savefig(self.dataset + f'/N{neuron}_offline_output.png')
-        plt.tight_layout()
-        plt.show()
  
+        with open('./data/interp_data_f.npy', 'rb') as f:
+            mean = np.load(f)
+        with open('./data/interp_data_sigma.npy', 'rb') as sigma:
+            cov = np.load(sigma)
+            
+        mean = np.reshape(mean,(1,len(param1),len(param2)))
+
+        fig, ax = plt.subplots(figsize=(8, 6))
+        plt.imshow(mean[0].T, origin='lower', aspect = 'auto')
+        plt.colorbar(label='Response')
+        plt.xlabel('Dimension 1')
+        plt.ylabel('Dimension 2')
+        if neuron == 'all':
+            plt.title('Interpolated Tuning Curve for Avg Neural Response')
+        else:
+            plt.title(f'N{neuron} Interpolated Tuning Curve')
+        plt.xticks(np.arange(len(param1)), param1)
+        plt.yticks(np.arange(len(param2)), param2)
+        plt.tight_layout()
+        plt.show()
