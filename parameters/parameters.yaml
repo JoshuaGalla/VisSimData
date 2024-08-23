@@ -1,8 +1,7 @@
 General:
-  seed: 42
-  method: interp_sim
-  response_data: "./data/response_data.txt"
-  stim_data: "./data/stim_data.txt"
+  seed: 1
+  response_data: "/stim_responses.txt"
+  stim_data: "/stim_data.txt"
 
 Simulate:
   stim_interval: 100 #interstimulus interval time
@@ -16,11 +15,10 @@ Simulate:
 
 Neurons:
   num_neurons: 10 #number of simulated neurons to generate
-  neuron: 8 #int or 'all'
+  neuron: 8 #neuron to interpolate: int or 'all'
 
 Interpolate:
   gamma: 125 #steepness of distribution
   var: 0.5 #variance of kernel
   nu: 1e-1 #trade off explore exploit
   eta: 5e-2 #noise in GP
-  kernel: 'rbf'
