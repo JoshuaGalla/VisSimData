@@ -1,6 +1,6 @@
 General:
   seed: 42
-  method: interp_control    # options are interp_control, interp_sim
+  method: interp_sim
   response_data: "./data/response_data.txt"
   stim_data: "./data/stim_data.txt"
 
