@@ -1,5 +1,5 @@
 General:
-  seed: 1
+  seed: 42
   response_data: "/stim_responses.txt"
   stim_data: "/stim_data.txt"
 
